@@ -52,6 +52,6 @@
 		<None Remove="Resources\**" />
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /y /s /i &quot;$(TargetDir)&quot; &quot;C:\Mendix Projects\Sample\extensions\MCP&quot;" />
+    <Exec Command="xcopy /y /s /i &quot;$(TargetDir)&quot; &quot;C:\Mendix Projects\mxSuperMCP-main\extensions\MCP&quot;" />
   </Target>
 </Project>
