@@ -1477,7 +1477,20 @@ namespace MCPExtension.Tools
                     "generate_sample_data",
                     "read_sample_data",
                     "setup_data_import",
-                    "arrange_domain_model"
+                    "arrange_domain_model",
+                    // Bridged tools (via Web Extension)
+                    "create_page [bridge]",
+                    "get_page_structure [bridge]",
+                    "add_widget [bridge]",
+                    "add_widget_to_container [bridge]",
+                    "delete_widget [bridge]",
+                    "set_page_title [bridge]",
+                    "list_layouts [bridge]",
+                    "web_create_object_action [bridge]",
+                    "web_change_object_action [bridge]",
+                    "web_retrieve_action [bridge]",
+                    "open_document [bridge]",
+                    "get_active_document [bridge]"
                 };
 
                 return JsonSerializer.Serialize(new { available_tools = tools });

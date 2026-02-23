@@ -34,6 +34,7 @@
     <PackageReference Include="Eto.Forms" Version="2.9.0" />
     <PackageReference Include="Mendix.StudioPro.ExtensionsAPI" Version="10.21.1" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.2.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />

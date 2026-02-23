@@ -557,7 +557,164 @@ namespace MCPExtension
                 return (object)result;
             });
 
-            _logger.LogInformation("MCP tools registered successfully");
+            // ============================================================
+            // Bridged tools (via Web Extension WebSocket)
+            // ============================================================
+
+            _mcpServer.RegisterTool("create_page", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["layoutName"] = parameters["layout_name"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("create_page", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("get_page_structure", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("get_page_structure", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("add_widget", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["placeholderName"] = parameters["placeholder_name"]?.GetValue<string>(),
+                    ["widgetType"] = parameters["widget_type"]?.GetValue<string>(),
+                };
+                if (parameters["widget_options"] != null)
+                    args["widgetOptions"] = JsonNode.Parse(parameters["widget_options"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("add_widget", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("add_widget_to_container", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["placeholderName"] = parameters["placeholder_name"]?.GetValue<string>(),
+                    ["containerName"] = parameters["container_name"]?.GetValue<string>(),
+                    ["widgetType"] = parameters["widget_type"]?.GetValue<string>(),
+                };
+                if (parameters["widget_options"] != null)
+                    args["widgetOptions"] = JsonNode.Parse(parameters["widget_options"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("add_widget_to_container", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("delete_widget", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["placeholderName"] = parameters["placeholder_name"]?.GetValue<string>(),
+                    ["widgetName"] = parameters["widget_name"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("delete_widget", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("set_page_title", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["title"] = parameters["title"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("set_page_title", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("list_layouts", async (JsonObject parameters) =>
+            {
+                var result = await _mcpServer.Bridge.CallAsync("list_layouts", new JsonObject());
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_create_object_action", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["entityName"] = parameters["entity_name"]?.GetValue<string>(),
+                    ["outputVariable"] = parameters["output_variable"]?.GetValue<string>(),
+                    ["commitType"] = parameters["commit_type"]?.GetValue<string>()
+                };
+                if (parameters["member_changes"] != null)
+                    args["memberChanges"] = JsonNode.Parse(parameters["member_changes"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_create_object_action", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_change_object_action", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["inputVariable"] = parameters["input_variable"]?.GetValue<string>(),
+                    ["commitType"] = parameters["commit_type"]?.GetValue<string>()
+                };
+                if (parameters["refresh_in_client"] != null)
+                    args["refreshInClient"] = parameters["refresh_in_client"]!.GetValue<bool>();
+                if (parameters["member_changes"] != null)
+                    args["memberChanges"] = JsonNode.Parse(parameters["member_changes"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_change_object_action", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_retrieve_action", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["entityName"] = parameters["entity_name"]?.GetValue<string>(),
+                    ["outputVariable"] = parameters["output_variable"]?.GetValue<string>(),
+                    ["xpathConstraint"] = parameters["xpath_constraint"]?.GetValue<string>(),
+                    ["rangeType"] = parameters["range_type"]?.GetValue<string>()
+                };
+                if (parameters["range_amount"] != null)
+                    args["rangeAmount"] = parameters["range_amount"]!.GetValue<int>();
+                var result = await _mcpServer.Bridge.CallAsync("web_retrieve_action", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("open_document", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["documentName"] = parameters["document_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["documentType"] = parameters["document_type"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("open_document", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("get_active_document", async (JsonObject parameters) =>
+            {
+                var result = await _mcpServer.Bridge.CallAsync("get_active_document", new JsonObject());
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _logger.LogInformation("MCP tools registered successfully (including 12 bridged tools)");
         }
 
         public async Task StopAsync()
@@ -596,7 +753,7 @@ namespace MCPExtension
             {
                 isRunning = _isRunning && _serverTask != null && !_serverTask.IsCompleted,
                 serverTaskStatus = _serverTask?.Status.ToString() ?? "Not Started",
-                registeredTools = 83, // Phase 26: +2 workflow introspection (list_workflows, read_workflow_details)
+                registeredTools = 95, // 83 native + 12 bridged (via Web Extension)
                 port = _port,
                 sseEndpoint = $"http://localhost:{_port}/sse",
                 healthEndpoint = $"http://localhost:{_port}/health",
@@ -608,8 +765,10 @@ namespace MCPExtension
 
         public string GetConnectionInfo()
         {
+            var bridgeStatus = _mcpServer?.IsBridgeConnected == true ? "connected" : "disconnected";
             return $"MCP Server running on http://localhost:{_port}\n" +
                    $"SSE Endpoint: http://localhost:{_port}/sse\n" +
+                   $"Bridge WS: ws://localhost:{_port}/bridge ({bridgeStatus})\n" +
                    $"Health Check: http://localhost:{_port}/health\n" +
                    $"MCP Metadata: http://localhost:{_port}/.well-known/mcp";
         }

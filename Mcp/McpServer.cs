@@ -13,7 +13,9 @@ using System.Text;
 using System.IO;
 using Mendix.StudioPro.ExtensionsAPI.Model;
 using Mendix.StudioPro.ExtensionsAPI.Model.Projects;
+using System.Net.WebSockets;
 using MCPExtension.MCP;
+using MCPExtension.Bridge;
 
 namespace MCPExtension.MCP
 {
@@ -35,12 +37,17 @@ namespace MCPExtension.MCP
         public int RegisteredToolCount => _tools.Count;
         public event Action<ToolCallEventArgs>? OnToolCallEvent;
 
+        // Bridge to Web Extension
+        public BridgeManager Bridge { get; }
+        public bool IsBridgeConnected => Bridge.IsConnected;
+
         public McpServer(ILogger<McpServer> logger, int port = 3001, string? projectDirectory = null)
         {
             _logger = logger;
             _tools = new Dictionary<string, Func<JsonObject, Task<object>>>();
             _port = port;
             _projectDirectory = projectDirectory;
+            Bridge = new BridgeManager(msg => LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {msg}"));
         }
 
         public void RegisterTool(string name, Func<JsonObject, Task<object>> handler)
@@ -68,6 +75,9 @@ namespace MCPExtension.MCP
                     })
                     .Configure(app =>
                     {
+                        // Enable WebSocket support for the bridge endpoint
+                        app.UseWebSockets();
+
                         // Add middleware to log all incoming requests
                         app.Use(async (context, next) =>
                         {
@@ -78,7 +88,33 @@ namespace MCPExtension.MCP
                             }
                             await next();
                         });
-                        
+
+                        // Handle WebSocket bridge endpoint for Web Extension
+                        app.Use(async (context, next) =>
+                        {
+                            if (context.Request.Path == "/bridge" && context.WebSockets.IsWebSocketRequest)
+                            {
+                                var mcpServer = context.RequestServices.GetRequiredService<McpServer>();
+                                var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                                mcpServer.LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Bridge WebSocket connection accepted");
+                                await mcpServer.Bridge.AcceptConnectionAsync(webSocket);
+
+                                // Keep the connection alive until it closes
+                                while (webSocket.State == WebSocketState.Open)
+                                {
+                                    await Task.Delay(1000);
+                                }
+                                return;
+                            }
+                            else if (context.Request.Path == "/bridge")
+                            {
+                                context.Response.StatusCode = 400;
+                                await context.Response.WriteAsync("WebSocket connections only");
+                                return;
+                            }
+                            await next();
+                        });
+
                         // Handle SSE endpoint
                         app.Map("/sse", HandleSseApp);
                         
@@ -107,7 +143,9 @@ namespace MCPExtension.MCP
                         {
                             healthApp.Run(async context =>
                             {
-                                await context.Response.WriteAsync("MCP Server is running");
+                                var mcpServer = context.RequestServices.GetRequiredService<McpServer>();
+                                var bridgeStatus = mcpServer.IsBridgeConnected ? "connected" : "disconnected";
+                                await context.Response.WriteAsync($"MCP Server is running (bridge: {bridgeStatus})");
                             });
                         });
                         
@@ -159,6 +197,7 @@ namespace MCPExtension.MCP
                 LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] - Messages: http://localhost:{_port}/message");
                 LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] - Root POST: http://localhost:{_port}/");
                 LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] - Health: http://localhost:{_port}/health");
+                LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] - Bridge WS: ws://localhost:{_port}/bridge");
                 LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] - Metadata: http://localhost:{_port}/.well-known/mcp");
                 LogToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Registered {_tools.Count} tools");
                 _logger.LogInformation($"MCP Server started successfully on http://localhost:{_port}");
@@ -672,6 +711,19 @@ namespace MCPExtension.MCP
                 "read_sample_data" => "Read previously saved sample data from SampleData.json (or a custom file path). Returns the JSON content and file size.",
                 "setup_data_import" => "Wire up the sample data import pipeline: checks for AIExtension.InsertDataFromJSON Java action, creates an After Startup microflow that calls it, and configures the After Startup project setting. Idempotent — safe to call multiple times. Run after generate_sample_data or after manually placing a SampleData.json in resources/.",
                 "arrange_domain_model" => "Arrange entities on the domain model canvas using smart association-aware layout. Groups related entities together in hierarchical trees based on their associations. Use optional root_entity to specify which entity appears at the top of the hierarchy. Disconnected entity groups are placed side by side. Orphan entities (no associations) go in a grid row at the bottom. Call after creating entities and associations to get a clean visual layout.",
+                // Bridged tools (via Web Extension)
+                "create_page" => "[Bridge] Create a new blank page in a module with a specified layout. Use list_layouts first to see available layouts. Requires the Web Bridge extension to be connected.",
+                "get_page_structure" => "[Bridge] Load a page and return its full widget tree: placeholders, widgets with IDs and types. Use this to find placeholder names and widget IDs before adding/removing widgets. Requires Web Bridge.",
+                "add_widget" => "[Bridge] Add a widget to a page's layout placeholder. Supported types: TextBox, TextArea, ActionButton, CheckBox, DatePicker, DropDown, DataView, DataGrid, ListView, GroupBox, DivContainer, Title, Header, Label, LayoutGrid, ReferenceSelector. Requires Web Bridge.",
+                "add_widget_to_container" => "[Bridge] Add a widget inside a container widget (DataView, GroupBox, DivContainer, etc.). Specify the container by name. Use get_page_structure first to find container names. Requires Web Bridge.",
+                "delete_widget" => "[Bridge] Delete a widget from a page by name. Use get_page_structure first to find widget names. Requires Web Bridge.",
+                "set_page_title" => "[Bridge] Set or update the title of a page (en_US translation). Handles duplicate prevention. Requires Web Bridge.",
+                "list_layouts" => "[Bridge] List all available page layouts with names and IDs. Use layout names when creating pages. Requires Web Bridge.",
+                "web_create_object_action" => "[Bridge] Add a CreateObject action to a microflow with proper entity binding via ByNameReference. Supports member changes (attribute assignments) and commit type. Superior to C# create_microflow_activities for entity-bound operations. Requires Web Bridge.",
+                "web_change_object_action" => "[Bridge] Add a ChangeObject action to a microflow with proper attribute bindings via ByNameReference. Supports member changes, commit type, and refresh in client. Requires Web Bridge.",
+                "web_retrieve_action" => "[Bridge] Add a Retrieve action to a microflow with proper entity binding via ByNameReference. Supports XPath constraints, range type (all/first/custom), and output variable. Requires Web Bridge.",
+                "open_document" => "[Bridge] Open a document (page, microflow, etc.) in the Studio Pro editor. Supports filtering by module and document type. Requires Web Bridge.",
+                "get_active_document" => "[Bridge] Get information about the currently active (focused) document in Studio Pro. Returns document ID, type, and name. Requires Web Bridge.",
                 _ => "Tool description not available"
             };
         }
@@ -1783,6 +1835,144 @@ namespace MCPExtension.MCP
                         root_entity = new { type = "string", description = "Optional: entity name to place at the top of the hierarchy (overrides automatic root selection)" }
                     },
                     required = new[] { "module_name" }
+                },
+                // Bridged tools (via Web Extension)
+                "create_page" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module to create the page in" },
+                        page_name = new { type = "string", description = "Name for the new page" },
+                        layout_name = new { type = "string", description = "Layout to use (e.g. 'Atlas_Default'). Use list_layouts to see available options. If omitted, uses the first available layout." }
+                    },
+                    required = new[] { "module_name", "page_name" }
+                },
+                "get_page_structure" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page to inspect" },
+                        module_name = new { type = "string", description = "Module containing the page (optional — searches all modules if omitted)" }
+                    },
+                    required = new[] { "page_name" }
+                },
+                "add_widget" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page to add widget to" },
+                        module_name = new { type = "string", description = "Module containing the page (optional)" },
+                        placeholder_name = new { type = "string", description = "Layout placeholder name (e.g. 'Main'). Use get_page_structure to find available placeholders." },
+                        widget_type = new { type = "string", description = "Widget type: TextBox, TextArea, ActionButton, CheckBox, DatePicker, DropDown, DataView, DataGrid, ListView, GroupBox, DivContainer, Title, Header, Label, LayoutGrid, ReferenceSelector" },
+                        widget_options = new { type = "object", description = "Optional widget configuration: { name: string, caption: string }" }
+                    },
+                    required = new[] { "page_name", "placeholder_name", "widget_type" }
+                },
+                "add_widget_to_container" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page" },
+                        module_name = new { type = "string", description = "Module containing the page (optional)" },
+                        placeholder_name = new { type = "string", description = "Layout placeholder containing the container" },
+                        container_name = new { type = "string", description = "Name of the container widget (DataView, GroupBox, etc.)" },
+                        widget_type = new { type = "string", description = "Widget type to add inside the container" },
+                        widget_options = new { type = "object", description = "Optional widget configuration: { name: string, caption: string }" }
+                    },
+                    required = new[] { "page_name", "placeholder_name", "container_name", "widget_type" }
+                },
+                "delete_widget" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page" },
+                        module_name = new { type = "string", description = "Module containing the page (optional)" },
+                        placeholder_name = new { type = "string", description = "Layout placeholder containing the widget" },
+                        widget_name = new { type = "string", description = "Name of the widget to delete" }
+                    },
+                    required = new[] { "page_name", "placeholder_name", "widget_name" }
+                },
+                "set_page_title" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page" },
+                        module_name = new { type = "string", description = "Module containing the page (optional)" },
+                        title = new { type = "string", description = "New page title text (en_US)" }
+                    },
+                    required = new[] { "page_name", "title" }
+                },
+                "list_layouts" => new
+                {
+                    type = "object",
+                    properties = new { },
+                    required = new string[0]
+                },
+                "web_create_object_action" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow to add the action to" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        entity_name = new { type = "string", description = "Qualified entity name (e.g. 'MyModule.Customer')" },
+                        output_variable = new { type = "string", description = "Variable name for the created object" },
+                        member_changes = new { type = "array", description = "Array of {attribute, value} — e.g. [{attribute: 'MyModule.Customer.Name', value: \"'John'\"}]" },
+                        commit_type = new { type = "string", description = "Commit behavior: 'Yes', 'YesWithoutEvents', 'No'" }
+                    },
+                    required = new[] { "microflow_name", "entity_name" }
+                },
+                "web_change_object_action" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        input_variable = new { type = "string", description = "Variable name of the object to change" },
+                        member_changes = new { type = "array", description = "Array of {attribute, value} — e.g. [{attribute: 'MyModule.Customer.Name', value: '$Name'}]" },
+                        commit_type = new { type = "string", description = "Commit behavior: 'Yes', 'YesWithoutEvents', 'No'" },
+                        refresh_in_client = new { type = "boolean", description = "Whether to refresh the object in the client" }
+                    },
+                    required = new[] { "microflow_name", "input_variable" }
+                },
+                "web_retrieve_action" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        entity_name = new { type = "string", description = "Qualified entity name to retrieve (e.g. 'MyModule.Customer')" },
+                        output_variable = new { type = "string", description = "Variable name for the retrieved object(s)" },
+                        xpath_constraint = new { type = "string", description = "XPath constraint for filtering (e.g. '[Name = $InputName]')" },
+                        range_type = new { type = "string", description = "Range: 'all' (default), 'first' (single object), 'custom'" },
+                        range_amount = new { type = "integer", description = "Number of objects for custom range" }
+                    },
+                    required = new[] { "microflow_name", "entity_name" }
+                },
+                "open_document" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        document_name = new { type = "string", description = "Name of the document to open" },
+                        module_name = new { type = "string", description = "Module containing the document (optional)" },
+                        document_type = new { type = "string", description = "Filter by type (e.g. 'Page', 'Microflow'). Optional." }
+                    },
+                    required = new[] { "document_name" }
+                },
+                "get_active_document" => new
+                {
+                    type = "object",
+                    properties = new { },
+                    required = new string[0]
                 },
                 _ => new
                 {

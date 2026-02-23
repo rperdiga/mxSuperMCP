@@ -12,3 +12,5 @@ mcp_debug.log
 # Stress test artifacts
 stress-test-call.sh
 stress-test-results.log
+WebBridge/node_modules/
+WebBridge/dist/
