@@ -14,10 +14,10 @@ async function ensureExtensionDirectoryExists(appDir, extensionDirectoryName) {
 async function copyExtensionAssetsToApplication(appExtensionDirPath, outDir) {
     const extensionName = outDir.split("/").pop();
     const deployedExtensionPath = `${appExtensionDirPath}/${extensionName}`;
-    if (pathExists(deployedExtensionPath)) {
-        await fs.rm(deployedExtensionPath, { recursive: true, force: true });
+    if (!pathExists(deployedExtensionPath)) {
+        await fs.mkdir(deployedExtensionPath, { recursive: true });
     }
-    await fs.mkdir(deployedExtensionPath);
+    // Non-destructive copy: merge JS files alongside existing C# DLLs
     await fs.cp(outDir, deployedExtensionPath, { recursive: true });
 }
 
