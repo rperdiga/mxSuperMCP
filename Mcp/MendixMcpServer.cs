@@ -714,7 +714,377 @@ namespace MCPExtension
                 return (object)JsonSerializer.Serialize(result);
             });
 
-            _logger.LogInformation("MCP tools registered successfully (including 12 bridged tools)");
+            // ============================================================
+            // Group A: Advanced Microflow Tools (6 tools)
+            // ============================================================
+
+            _mcpServer.RegisterTool("web_log_message_action", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["level"] = parameters["level"]?.GetValue<string>(),
+                    ["node"] = parameters["node"]?.GetValue<string>(),
+                    ["messageTemplate"] = parameters["message_template"]?.GetValue<string>()
+                };
+                if (parameters["include_stack_trace"] != null)
+                    args["includeStackTrace"] = parameters["include_stack_trace"]!.GetValue<bool>();
+                var result = await _mcpServer.Bridge.CallAsync("web_log_message_action", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_exclusive_split", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["caption"] = parameters["caption"]?.GetValue<string>(),
+                    ["expression"] = parameters["expression"]?.GetValue<string>(),
+                    ["trueCaseCaption"] = parameters["true_case_caption"]?.GetValue<string>(),
+                    ["falseCaseCaption"] = parameters["false_case_caption"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_exclusive_split", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_delete_object_action", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["inputVariable"] = parameters["input_variable"]?.GetValue<string>()
+                };
+                if (parameters["refresh_in_client"] != null)
+                    args["refreshInClient"] = parameters["refresh_in_client"]!.GetValue<bool>();
+                var result = await _mcpServer.Bridge.CallAsync("web_delete_object_action", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_commit_action", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["inputVariable"] = parameters["input_variable"]?.GetValue<string>()
+                };
+                if (parameters["with_events"] != null)
+                    args["withEvents"] = parameters["with_events"]!.GetValue<bool>();
+                if (parameters["refresh_in_client"] != null)
+                    args["refreshInClient"] = parameters["refresh_in_client"]!.GetValue<bool>();
+                var result = await _mcpServer.Bridge.CallAsync("web_commit_action", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_set_end_event", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["returnExpression"] = parameters["return_expression"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_set_end_event", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_microflow_call_action", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["calledMicroflow"] = parameters["called_microflow"]?.GetValue<string>(),
+                    ["outputVariable"] = parameters["output_variable"]?.GetValue<string>()
+                };
+                if (parameters["parameters"] != null)
+                    args["parameters"] = JsonNode.Parse(parameters["parameters"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_microflow_call_action", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            // ============================================================
+            // Group B: Workflow Tools (5 tools)
+            // ============================================================
+
+            _mcpServer.RegisterTool("web_create_workflow", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["workflowName"] = parameters["workflow_name"]?.GetValue<string>(),
+                    ["contextEntity"] = parameters["context_entity"]?.GetValue<string>(),
+                    ["title"] = parameters["title"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_create_workflow", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_user_task", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["workflowName"] = parameters["workflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["taskName"] = parameters["task_name"]?.GetValue<string>(),
+                    ["caption"] = parameters["caption"]?.GetValue<string>(),
+                    ["taskPage"] = parameters["task_page"]?.GetValue<string>()
+                };
+                if (parameters["outcomes"] != null)
+                    args["outcomes"] = JsonNode.Parse(parameters["outcomes"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_add_user_task", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_workflow_decision", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["workflowName"] = parameters["workflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["decisionName"] = parameters["decision_name"]?.GetValue<string>(),
+                    ["caption"] = parameters["caption"]?.GetValue<string>(),
+                    ["expression"] = parameters["expression"]?.GetValue<string>()
+                };
+                if (parameters["outcomes"] != null)
+                    args["outcomes"] = JsonNode.Parse(parameters["outcomes"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_add_workflow_decision", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_workflow_call_microflow", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["workflowName"] = parameters["workflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["taskName"] = parameters["task_name"]?.GetValue<string>(),
+                    ["microflow"] = parameters["microflow"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_add_workflow_call_microflow", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_workflow_parallel_split", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["workflowName"] = parameters["workflow_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["splitName"] = parameters["split_name"]?.GetValue<string>()
+                };
+                if (parameters["path_count"] != null)
+                    args["pathCount"] = parameters["path_count"]!.GetValue<int>();
+                var result = await _mcpServer.Bridge.CallAsync("web_add_workflow_parallel_split", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            // ============================================================
+            // Group C: Security & Enumeration Tools (5 tools)
+            // ============================================================
+
+            _mcpServer.RegisterTool("web_add_access_rule", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["entityName"] = parameters["entity_name"]?.GetValue<string>(),
+                    ["defaultRights"] = parameters["default_rights"]?.GetValue<string>(),
+                    ["xpathConstraint"] = parameters["xpath_constraint"]?.GetValue<string>()
+                };
+                if (parameters["module_roles"] != null)
+                    args["moduleRoles"] = JsonNode.Parse(parameters["module_roles"]!.ToJsonString());
+                if (parameters["allow_create"] != null)
+                    args["allowCreate"] = parameters["allow_create"]!.GetValue<bool>();
+                if (parameters["allow_delete"] != null)
+                    args["allowDelete"] = parameters["allow_delete"]!.GetValue<bool>();
+                var result = await _mcpServer.Bridge.CallAsync("web_add_access_rule", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_set_member_access", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["entityName"] = parameters["entity_name"]?.GetValue<string>()
+                };
+                if (parameters["rule_index"] != null)
+                    args["ruleIndex"] = parameters["rule_index"]!.GetValue<int>();
+                if (parameters["member_accesses"] != null)
+                    args["memberAccesses"] = JsonNode.Parse(parameters["member_accesses"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_set_member_access", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_validation_rule", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["entityName"] = parameters["entity_name"]?.GetValue<string>(),
+                    ["attributeName"] = parameters["attribute_name"]?.GetValue<string>(),
+                    ["ruleType"] = parameters["rule_type"]?.GetValue<string>(),
+                    ["errorMessage"] = parameters["error_message"]?.GetValue<string>(),
+                    ["regexPattern"] = parameters["regex_pattern"]?.GetValue<string>()
+                };
+                if (parameters["min_value"] != null)
+                    args["minValue"] = parameters["min_value"]!.GetValue<double>();
+                if (parameters["max_value"] != null)
+                    args["maxValue"] = parameters["max_value"]!.GetValue<double>();
+                if (parameters["min_length"] != null)
+                    args["minLength"] = parameters["min_length"]!.GetValue<int>();
+                if (parameters["max_length"] != null)
+                    args["maxLength"] = parameters["max_length"]!.GetValue<int>();
+                var result = await _mcpServer.Bridge.CallAsync("web_add_validation_rule", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_create_enumeration", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["enumerationName"] = parameters["enumeration_name"]?.GetValue<string>()
+                };
+                if (parameters["values"] != null)
+                    args["values"] = JsonNode.Parse(parameters["values"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_create_enumeration", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_enumeration_value", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["enumerationName"] = parameters["enumeration_name"]?.GetValue<string>(),
+                    ["valueName"] = parameters["value_name"]?.GetValue<string>(),
+                    ["caption"] = parameters["caption"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_add_enumeration_value", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            // ============================================================
+            // Group D: Page, Snippet & Building Block Tools (8 tools)
+            // ============================================================
+
+            _mcpServer.RegisterTool("web_create_snippet", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["snippetName"] = parameters["snippet_name"]?.GetValue<string>(),
+                    ["widgetType"] = parameters["widget_type"]?.GetValue<string>()
+                };
+                if (parameters["widget_options"] != null)
+                    args["widgetOptions"] = JsonNode.Parse(parameters["widget_options"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_create_snippet", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_widget_to_snippet", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["snippetName"] = parameters["snippet_name"]?.GetValue<string>(),
+                    ["widgetType"] = parameters["widget_type"]?.GetValue<string>()
+                };
+                if (parameters["widget_options"] != null)
+                    args["widgetOptions"] = JsonNode.Parse(parameters["widget_options"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_add_widget_to_snippet", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_create_building_block", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["blockName"] = parameters["block_name"]?.GetValue<string>(),
+                    ["platform"] = parameters["platform"]?.GetValue<string>(),
+                    ["widgetType"] = parameters["widget_type"]?.GetValue<string>()
+                };
+                if (parameters["widget_options"] != null)
+                    args["widgetOptions"] = JsonNode.Parse(parameters["widget_options"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_create_building_block", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_add_widget_to_building_block", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["blockName"] = parameters["block_name"]?.GetValue<string>(),
+                    ["widgetType"] = parameters["widget_type"]?.GetValue<string>()
+                };
+                if (parameters["widget_options"] != null)
+                    args["widgetOptions"] = JsonNode.Parse(parameters["widget_options"]!.ToJsonString());
+                var result = await _mcpServer.Bridge.CallAsync("web_add_widget_to_building_block", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_set_widget_datasource", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["widgetName"] = parameters["widget_name"]?.GetValue<string>(),
+                    ["datasourceType"] = parameters["datasource_type"]?.GetValue<string>(),
+                    ["entityName"] = parameters["entity_name"]?.GetValue<string>(),
+                    ["xpathConstraint"] = parameters["xpath_constraint"]?.GetValue<string>(),
+                    ["microflowName"] = parameters["microflow_name"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_set_widget_datasource", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_configure_widget_property", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>(),
+                    ["widgetName"] = parameters["widget_name"]?.GetValue<string>(),
+                    ["propertyName"] = parameters["property_name"]?.GetValue<string>(),
+                    ["propertyValue"] = parameters["property_value"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_configure_widget_property", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_duplicate_page", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["sourcePageName"] = parameters["source_page_name"]?.GetValue<string>(),
+                    ["sourceModuleName"] = parameters["source_module_name"]?.GetValue<string>(),
+                    ["targetPageName"] = parameters["target_page_name"]?.GetValue<string>(),
+                    ["targetModuleName"] = parameters["target_module_name"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_duplicate_page", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _mcpServer.RegisterTool("web_list_widget_types", async (JsonObject parameters) =>
+            {
+                var args = new JsonObject
+                {
+                    ["pageName"] = parameters["page_name"]?.GetValue<string>(),
+                    ["moduleName"] = parameters["module_name"]?.GetValue<string>()
+                };
+                var result = await _mcpServer.Bridge.CallAsync("web_list_widget_types", args);
+                return (object)JsonSerializer.Serialize(result);
+            });
+
+            _logger.LogInformation("MCP tools registered successfully (including 36 bridged tools)");
         }
 
         public async Task StopAsync()
@@ -753,7 +1123,7 @@ namespace MCPExtension
             {
                 isRunning = _isRunning && _serverTask != null && !_serverTask.IsCompleted,
                 serverTaskStatus = _serverTask?.Status.ToString() ?? "Not Started",
-                registeredTools = 95, // 83 native + 12 bridged (via Web Extension)
+                registeredTools = 119, // 83 native + 36 bridged (via Web Extension)
                 port = _port,
                 sseEndpoint = $"http://localhost:{_port}/sse",
                 healthEndpoint = $"http://localhost:{_port}/health",

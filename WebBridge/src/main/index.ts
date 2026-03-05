@@ -11,7 +11,7 @@ export const component: IComponent = {
                 initialPosition: "right"
             },
             {
-                componentName: "extension/MCP",
+                componentName: "extension/web-bridge",
                 uiEntrypoint: "tab",
             }
         );

@@ -1,8 +1,8 @@
 import * as esbuild from 'esbuild'
-import {copyToAppPlugin, commonConfig} from "./build.helpers.mjs"
+import {copyToAppPlugin, copyManifestPlugin, commonConfig} from "./build.helpers.mjs"
 import parseArgs from "minimist"
 
-const outDir = `dist/MCP`
+const outDir = `dist/web-bridge`
 const appDir = "C:/Mendix Projects/mxSuperMCP-main"
 const extensionDirectoryName = "extensions"
 
@@ -21,7 +21,7 @@ const args = parseArgs(process.argv.slice(2))
 const buildContext = await esbuild.context({
   ...commonConfig,
   outdir: outDir,
-  plugins: [copyToAppPlugin(appDir, outDir, extensionDirectoryName)],
+  plugins: [copyManifestPlugin(outDir), copyToAppPlugin(appDir, outDir, extensionDirectoryName)],
   entryPoints
 })
 

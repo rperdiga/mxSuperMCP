@@ -724,6 +724,34 @@ namespace MCPExtension.MCP
                 "web_retrieve_action" => "[Bridge] Add a Retrieve action to a microflow with proper entity binding via ByNameReference. Supports XPath constraints, range type (all/first/custom), and output variable. Requires Web Bridge.",
                 "open_document" => "[Bridge] Open a document (page, microflow, etc.) in the Studio Pro editor. Supports filtering by module and document type. Requires Web Bridge.",
                 "get_active_document" => "[Bridge] Get information about the currently active (focused) document in Studio Pro. Returns document ID, type, and name. Requires Web Bridge.",
+                // Group A: Advanced Microflow Tools
+                "web_log_message_action" => "[Bridge] Add a LogMessage action to a microflow. Supports log levels (Info, Warning, Error, Debug, Trace, Critical), custom node name, message template, and stack trace inclusion. Fixes the C# limitation where LogMessage creation is blocked. Requires Web Bridge.",
+                "web_exclusive_split" => "[Bridge] Add an ExclusiveSplit (decision) to a microflow with an expression-based condition. Creates the split with ExpressionSplitCondition. Use read_microflow_details to verify placement. Requires Web Bridge.",
+                "web_delete_object_action" => "[Bridge] Add a DeleteObject action to a microflow. Deletes the object referenced by the input variable. Supports refresh in client option. Requires Web Bridge.",
+                "web_commit_action" => "[Bridge] Add a Commit action to a microflow. Commits the object referenced by the input variable to the database. Supports with_events and refresh_in_client options. Requires Web Bridge.",
+                "web_set_end_event" => "[Bridge] Set the return expression on a microflow's EndEvent. Fixes the C# limitation where end event return value cannot be updated after creation. The expression should reference a variable (e.g., '$MyVariable'). Requires Web Bridge.",
+                "web_microflow_call_action" => "[Bridge] Add a MicroflowCall action to a microflow. Calls another microflow with parameter mappings using ByNameReference. Supports output variable for capturing return value. Requires Web Bridge.",
+                // Group B: Workflow Tools
+                "web_create_workflow" => "[Bridge] Create a new workflow in a module. Supports setting context entity and title. C# can only read workflows — this is the only way to create them. Requires Web Bridge.",
+                "web_add_user_task" => "[Bridge] Add a UserTask activity to a workflow. Supports task name, caption, task page reference, and custom outcomes. Requires an existing workflow (use web_create_workflow first). Requires Web Bridge.",
+                "web_add_workflow_decision" => "[Bridge] Add a Decision (ExclusiveSplit) activity to a workflow with an expression and custom outcomes. Requires an existing workflow. Requires Web Bridge.",
+                "web_add_workflow_call_microflow" => "[Bridge] Add a CallMicroflow task to a workflow. References a microflow by qualified name (e.g., 'Module.MicroflowName'). Requires an existing workflow. Requires Web Bridge.",
+                "web_add_workflow_parallel_split" => "[Bridge] Add a ParallelSplit activity to a workflow with configurable number of parallel paths (default: 2). Requires an existing workflow. Requires Web Bridge.",
+                // Group C: Security & Enumeration Tools
+                "web_add_access_rule" => "[Bridge] Add an entity access rule with module role bindings, CRUD permissions, default member rights, and XPath constraint. Unlocks write access for entity security that C# can only read. Requires Web Bridge.",
+                "web_set_member_access" => "[Bridge] Set per-member (attribute/association) access rights on an existing entity access rule. Specify rule by index (0-based). Use web_add_access_rule first to create the rule. Requires Web Bridge.",
+                "web_add_validation_rule" => "[Bridge] Add a validation rule to an entity attribute. Supports rule types: Required, Unique, Range, RegularExpression, MaxLength. Includes error message and rule-specific parameters (min/max value, regex pattern, min/max length). Requires Web Bridge.",
+                "web_create_enumeration" => "[Bridge] Create a new enumeration via the Web Extension API with values and captions. Alternative to the C# create_enumeration tool, useful when the C# tool encounters issues. Requires Web Bridge.",
+                "web_add_enumeration_value" => "[Bridge] Add a new value to an existing enumeration. Supports custom caption (defaults to value name). Requires Web Bridge.",
+                // Group D: Page, Snippet & Building Block Tools
+                "web_create_snippet" => "[Bridge] Create a new snippet in a module. Snippets are reusable page fragments. Can optionally add a widget during creation (recommended, as loading existing snippets for editing is limited). Requires Web Bridge.",
+                "web_add_widget_to_snippet" => "[Bridge] Add a widget to a snippet. Works best when called right after web_create_snippet (uses cached loaded snippet). For existing snippets, loading may fail due to API limitations. Requires Web Bridge.",
+                "web_create_building_block" => "[Bridge] Create a new building block in a module. Building blocks are reusable page templates. Can optionally add a widget during creation (recommended). Supports platform selection (Web/Native). Requires Web Bridge.",
+                "web_add_widget_to_building_block" => "[Bridge] Add a widget to a building block. Works best when called right after web_create_building_block (uses cached loaded block). For existing blocks, loading may fail due to API limitations. Requires Web Bridge.",
+                "web_set_widget_datasource" => "[Bridge] Set the datasource on a data widget (DataView, ListView, DataGrid). Supports datasource types: database/xpath (with entity and XPath constraint), microflow (with microflow reference), association. Requires Web Bridge.",
+                "web_configure_widget_property" => "[Bridge] Set any property on a widget by name. Handles translatable text properties (caption, label) automatically. Use get_page_structure to find widget names and web_list_widget_types to discover available properties. Requires Web Bridge.",
+                "web_duplicate_page" => "[Bridge] Duplicate an existing page to a new name, optionally in a different module. Copies the full page structure including all widgets and layout bindings. Requires Web Bridge.",
+                "web_list_widget_types" => "[Bridge] Discovery tool: list all available widget types that can be added to each placeholder in a page. Returns add* methods available on each placeholder/container. Use before add_widget to know what's available. Requires Web Bridge.",
                 _ => "Tool description not available"
             };
         }
@@ -1973,6 +2001,318 @@ namespace MCPExtension.MCP
                     type = "object",
                     properties = new { },
                     required = new string[0]
+                },
+                // Group A: Advanced Microflow Tools
+                "web_log_message_action" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow to add the LogMessage action to" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        level = new { type = "string", description = "Log level: Info, Warning, Error, Debug, Trace, Critical (default: Info)" },
+                        node = new { type = "string", description = "Log node name (category for filtering in console)" },
+                        message_template = new { type = "string", description = "Message template string (e.g. 'Processing order {1}')" },
+                        include_stack_trace = new { type = "boolean", description = "Whether to include the latest stack trace (default: false)" }
+                    },
+                    required = new[] { "microflow_name", "message_template" }
+                },
+                "web_exclusive_split" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow to add the decision to" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        caption = new { type = "string", description = "Caption/label for the decision diamond" },
+                        expression = new { type = "string", description = "Boolean expression for the split condition (e.g. '$Count > 0')" },
+                        true_case_caption = new { type = "string", description = "Label for the true branch (default: 'true')" },
+                        false_case_caption = new { type = "string", description = "Label for the false branch (default: 'false')" }
+                    },
+                    required = new[] { "microflow_name", "expression" }
+                },
+                "web_delete_object_action" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        input_variable = new { type = "string", description = "Variable name of the object to delete" },
+                        refresh_in_client = new { type = "boolean", description = "Whether to refresh in client after deletion" }
+                    },
+                    required = new[] { "microflow_name", "input_variable" }
+                },
+                "web_commit_action" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        input_variable = new { type = "string", description = "Variable name of the object to commit" },
+                        with_events = new { type = "boolean", description = "Whether to execute event handlers (default: true)" },
+                        refresh_in_client = new { type = "boolean", description = "Whether to refresh in client after commit" }
+                    },
+                    required = new[] { "microflow_name", "input_variable" }
+                },
+                "web_set_end_event" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        return_expression = new { type = "string", description = "Return expression (e.g. '$MyVariable', 'true', '$Count > 0')" }
+                    },
+                    required = new[] { "microflow_name", "return_expression" }
+                },
+                "web_microflow_call_action" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        microflow_name = new { type = "string", description = "Name of the microflow to add the call action to" },
+                        module_name = new { type = "string", description = "Module containing the microflow (optional)" },
+                        called_microflow = new { type = "string", description = "Qualified name of the microflow to call (e.g. 'MyModule.SUB_ProcessOrder')" },
+                        output_variable = new { type = "string", description = "Variable name for the return value (optional)" },
+                        parameters = new { type = "array", description = "Array of {name, value} parameter mappings (e.g. [{name: 'OrderParam', value: '$Order'}])" }
+                    },
+                    required = new[] { "microflow_name", "called_microflow" }
+                },
+                // Group B: Workflow Tools
+                "web_create_workflow" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module to create the workflow in" },
+                        workflow_name = new { type = "string", description = "Name for the new workflow" },
+                        context_entity = new { type = "string", description = "Qualified entity name for workflow context (e.g. 'MyModule.Order')" },
+                        title = new { type = "string", description = "Display title for the workflow (en_US)" }
+                    },
+                    required = new[] { "module_name", "workflow_name" }
+                },
+                "web_add_user_task" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        workflow_name = new { type = "string", description = "Name of the workflow to add the task to" },
+                        module_name = new { type = "string", description = "Module containing the workflow (optional)" },
+                        task_name = new { type = "string", description = "Internal name of the user task" },
+                        caption = new { type = "string", description = "Display caption for the user task (en_US)" },
+                        task_page = new { type = "string", description = "Qualified page name for the task form (e.g. 'MyModule.Task_ReviewOrder')" },
+                        outcomes = new { type = "array", description = "Array of {name, caption} outcomes (e.g. [{name: 'Approve', caption: 'Approve'}])" }
+                    },
+                    required = new[] { "workflow_name", "task_name" }
+                },
+                "web_add_workflow_decision" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        workflow_name = new { type = "string", description = "Name of the workflow" },
+                        module_name = new { type = "string", description = "Module containing the workflow (optional)" },
+                        decision_name = new { type = "string", description = "Internal name for the decision" },
+                        caption = new { type = "string", description = "Display caption for the decision (en_US)" },
+                        expression = new { type = "string", description = "Boolean expression for the decision" },
+                        outcomes = new { type = "array", description = "Array of {name, caption, value} outcomes" }
+                    },
+                    required = new[] { "workflow_name", "decision_name" }
+                },
+                "web_add_workflow_call_microflow" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        workflow_name = new { type = "string", description = "Name of the workflow" },
+                        module_name = new { type = "string", description = "Module containing the workflow (optional)" },
+                        task_name = new { type = "string", description = "Internal name for the call microflow task" },
+                        microflow = new { type = "string", description = "Qualified microflow name to call (e.g. 'MyModule.ACT_ProcessOrder')" }
+                    },
+                    required = new[] { "workflow_name", "task_name", "microflow" }
+                },
+                "web_add_workflow_parallel_split" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        workflow_name = new { type = "string", description = "Name of the workflow" },
+                        module_name = new { type = "string", description = "Module containing the workflow (optional)" },
+                        split_name = new { type = "string", description = "Internal name for the parallel split" },
+                        path_count = new { type = "integer", description = "Number of parallel paths (default: 2)" }
+                    },
+                    required = new[] { "workflow_name", "split_name" }
+                },
+                // Group C: Security & Enumeration Tools
+                "web_add_access_rule" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module containing the entity" },
+                        entity_name = new { type = "string", description = "Name of the entity to add the access rule to" },
+                        module_roles = new { type = "array", description = "Array of module role names (e.g. ['User', 'Admin'])" },
+                        allow_create = new { type = "boolean", description = "Whether to allow creating objects (default: false)" },
+                        allow_delete = new { type = "boolean", description = "Whether to allow deleting objects (default: false)" },
+                        default_rights = new { type = "string", description = "Default member access rights: ReadWrite, ReadOnly, None" },
+                        xpath_constraint = new { type = "string", description = "XPath constraint to limit access (e.g. '[Owner = '[%CurrentUser%]']')" }
+                    },
+                    required = new[] { "module_name", "entity_name", "module_roles" }
+                },
+                "web_set_member_access" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module containing the entity" },
+                        entity_name = new { type = "string", description = "Name of the entity" },
+                        rule_index = new { type = "integer", description = "Index of the access rule (0-based, default: 0)" },
+                        member_accesses = new { type = "array", description = "Array of {attribute, rights} — e.g. [{attribute: 'MyModule.Customer.Name', rights: 'ReadWrite'}]" }
+                    },
+                    required = new[] { "module_name", "entity_name", "member_accesses" }
+                },
+                "web_add_validation_rule" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module containing the entity" },
+                        entity_name = new { type = "string", description = "Name of the entity" },
+                        attribute_name = new { type = "string", description = "Qualified attribute name (e.g. 'MyModule.Customer.Email')" },
+                        rule_type = new { type = "string", description = "Validation type: Required, Unique, Range, RegularExpression, MaxLength" },
+                        error_message = new { type = "string", description = "Error message shown when validation fails" },
+                        min_value = new { type = "number", description = "Minimum value (for Range rule)" },
+                        max_value = new { type = "number", description = "Maximum value (for Range rule)" },
+                        regex_pattern = new { type = "string", description = "Regular expression pattern (for RegularExpression rule)" },
+                        min_length = new { type = "integer", description = "Minimum string length" },
+                        max_length = new { type = "integer", description = "Maximum string length (for MaxLength rule)" }
+                    },
+                    required = new[] { "module_name", "entity_name", "attribute_name", "rule_type", "error_message" }
+                },
+                "web_create_enumeration" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module to create the enumeration in" },
+                        enumeration_name = new { type = "string", description = "Name for the new enumeration" },
+                        values = new { type = "array", description = "Array of values: strings (e.g. ['Active', 'Inactive']) or objects ({name, caption})" }
+                    },
+                    required = new[] { "module_name", "enumeration_name", "values" }
+                },
+                "web_add_enumeration_value" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module containing the enumeration (optional)" },
+                        enumeration_name = new { type = "string", description = "Name of the enumeration" },
+                        value_name = new { type = "string", description = "Name for the new enumeration value" },
+                        caption = new { type = "string", description = "Display caption (defaults to value_name if omitted)" }
+                    },
+                    required = new[] { "enumeration_name", "value_name" }
+                },
+                // Group D: Page, Snippet & Building Block Tools
+                "web_create_snippet" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module to create the snippet in" },
+                        snippet_name = new { type = "string", description = "Name for the new snippet" },
+                        widget_type = new { type = "string", description = "Widget type to add during creation (TextBox, DataView, etc.). Recommended: add widgets during creation since loading existing snippets for editing is limited." },
+                        widget_options = new { type = "object", description = "Optional widget configuration: { name: string, caption: string }" }
+                    },
+                    required = new[] { "module_name", "snippet_name" }
+                },
+                "web_add_widget_to_snippet" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module containing the snippet (optional)" },
+                        snippet_name = new { type = "string", description = "Name of the snippet" },
+                        widget_type = new { type = "string", description = "Widget type to add (TextBox, DataView, etc.)" },
+                        widget_options = new { type = "object", description = "Optional widget configuration: { name: string, caption: string }" }
+                    },
+                    required = new[] { "snippet_name", "widget_type" }
+                },
+                "web_create_building_block" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module to create the building block in" },
+                        block_name = new { type = "string", description = "Name for the new building block" },
+                        platform = new { type = "string", description = "Target platform: Web or Native (default: Web)" },
+                        widget_type = new { type = "string", description = "Widget type to add during creation (TextBox, DataView, etc.). Recommended: add widgets during creation since loading existing blocks for editing is limited." },
+                        widget_options = new { type = "object", description = "Optional widget configuration: { name: string, caption: string }" }
+                    },
+                    required = new[] { "module_name", "block_name" }
+                },
+                "web_add_widget_to_building_block" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Module containing the building block (optional)" },
+                        block_name = new { type = "string", description = "Name of the building block" },
+                        widget_type = new { type = "string", description = "Widget type to add (TextBox, DataView, etc.)" },
+                        widget_options = new { type = "object", description = "Optional widget configuration: { name: string, caption: string }" }
+                    },
+                    required = new[] { "block_name", "widget_type" }
+                },
+                "web_set_widget_datasource" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page containing the widget" },
+                        module_name = new { type = "string", description = "Module containing the page (optional)" },
+                        widget_name = new { type = "string", description = "Name of the data widget to configure" },
+                        datasource_type = new { type = "string", description = "Datasource type: database, xpath, microflow, nanoflow, association, dataview, listen" },
+                        entity_name = new { type = "string", description = "Qualified entity name (for database/xpath/association datasource)" },
+                        xpath_constraint = new { type = "string", description = "XPath constraint (for database/xpath datasource)" },
+                        microflow_name = new { type = "string", description = "Qualified microflow name (for microflow datasource)" }
+                    },
+                    required = new[] { "page_name", "widget_name", "datasource_type" }
+                },
+                "web_configure_widget_property" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page containing the widget" },
+                        module_name = new { type = "string", description = "Module containing the page (optional)" },
+                        widget_name = new { type = "string", description = "Name of the widget to configure" },
+                        property_name = new { type = "string", description = "Property name to set (e.g. 'caption', 'editable', 'visible')" },
+                        property_value = new { type = "string", description = "Value to set on the property" }
+                    },
+                    required = new[] { "page_name", "widget_name", "property_name", "property_value" }
+                },
+                "web_duplicate_page" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        source_page_name = new { type = "string", description = "Name of the page to duplicate" },
+                        source_module_name = new { type = "string", description = "Module containing the source page (optional)" },
+                        target_page_name = new { type = "string", description = "Name for the duplicated page" },
+                        target_module_name = new { type = "string", description = "Module for the duplicated page (optional, defaults to source module)" }
+                    },
+                    required = new[] { "source_page_name", "target_page_name" }
+                },
+                "web_list_widget_types" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        page_name = new { type = "string", description = "Name of the page to inspect" },
+                        module_name = new { type = "string", description = "Module containing the page (optional)" }
+                    },
+                    required = new[] { "page_name" }
                 },
                 _ => new
                 {

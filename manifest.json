@@ -1,11 +1,3 @@
 {
-  "mx_extensions": [ "MCPExtension.dll" ],
-  "mendixComponent": {
-    "entryPoints": {
-      "main": "main.js",
-      "ui": {
-        "tab": "tab.js"
-      }
-    }
-  }
+  "mx_extensions": [ "MCPExtension.dll" ]
 }
